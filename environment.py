@@ -3,23 +3,21 @@ import shimmy
 import numpy as np
 import gymnasium as gym
 
-# 1. Création de l'environnement
-# 'render_mode' permet de voir le jeu s'afficher à l'écran
+from pathlib import Path
+from state_utils import frames_to_bw_resized
+from image_utils import save_bw, save_rgb
 env = gym.make("ALE/Pong-v5")
 
 # 2. Réinitialisation de l'environnement
 observation, info = env.reset()
-
-def merge_frames(frames: list[np.array]) -> np.array:
-    return np.array(frames).mean(axis=0)
-
 frames = []
 for _ in range(1000):
     # 3. Choisir une action aléatoire (0-5 dans Pong)
     action = env.action_space.sample()
     observation, reward, terminated, truncated, info = env.step(action)
     frames.append(observation)
-    print(merge_frames(frames).shape)
+    state = frames_to_bw_resized(frames, 4, (105, 80))
+    save_bw(state, path=Path(f"exports/{_}.png"))
     if terminated or truncated:
         observation, info = env.reset()
 
