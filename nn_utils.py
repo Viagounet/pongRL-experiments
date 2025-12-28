@@ -32,7 +32,7 @@ def softmax(x):
     return e_x / np.sum(e_x, axis=-1, keepdims=True)
 
 def mse(y_true, y_pred):
-    return sum((y_true - y_pred)**2) / y_true.shape[0]
+    return np.mean((y_true - y_pred)**2)
 
 def update_params_randomly(params):
     new_params = []
@@ -105,7 +105,7 @@ if __name__ == "__main__":
     test_loss_history = []
     for step in range(MAX_STEP):
         pred, activations = infer(x_train, params)
-        train_loss = mse(y_train, pred).sum()
+        train_loss = mse(y_train, pred)
         training_loss_history.append(train_loss)
 
         test_pred, test_activations = infer(x_test, params)
