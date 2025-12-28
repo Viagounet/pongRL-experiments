@@ -104,15 +104,15 @@ if __name__ == "__main__":
     training_loss_history = []
     test_loss_history = []
     for step in range(MAX_STEP):
-        logits, activations = infer(x_train, params)
-        train_loss = mse(y_train, logits).sum()
+        pred, activations = infer(x_train, params)
+        train_loss = mse(y_train, pred).sum()
         training_loss_history.append(train_loss)
 
-        test_logits, test_activations = infer(x_test, params)
-        test_loss = mse(y_test, test_logits).sum()
+        test_pred, test_activations = infer(x_test, params)
+        test_loss = mse(y_test, test_pred).sum()
         test_loss_history.append(test_loss)
         
-        grads = return_partial_derivatives(params, activations, x_train, y_train, logits)
+        grads = return_partial_derivatives(params, activations, x_train, y_train, pred)
         params = update_params_with_grads(params, grads, step, MAX_STEP, HYPERPARAMS)
 
     y_test_pred, activations = infer(x_test, params)
