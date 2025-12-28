@@ -55,7 +55,7 @@ def get_lr(current_step, max_step, hyperparams) -> float:
         case "linear":
             if hyperparams["final_lr"] is None:
                 raise ValueError("With a `linear` lr regime, you need to set a final learning rate.")
-            return np.interp(current_step, [0, max_step], [hyperparams["initial_lr"], hyperparams["final_lr"]])
+            return np.interp(current_step, [0, max_step-1], [hyperparams["initial_lr"], hyperparams["final_lr"]])
         case _:
             raise ValueError("Parameter `lr_regime` must be either `constant` or `linear`")
 
