@@ -7,8 +7,9 @@ def initialize_linear_nn_params(shapes: tuple[int, ..., int]):
     layers = []
     previous_dim = shapes[0]
     for next_dim in shapes[1:]:
-        weights = rng.random((previous_dim, next_dim)) - 0.5
-        bias = rng.random((1, next_dim)) - 0.5
+        std_dev = np.sqrt(2.0 / previous_dim) # For ReLU activation function, apparently I need the He Initialization
+        weights = rng.normal(0, std_dev, (previous_dim, next_dim))
+        bias = np.zeros((1, next_dim))
         layers.append((weights, bias))
         previous_dim = next_dim
     return layers
@@ -94,7 +95,7 @@ if __name__ == "__main__":
     x_min, x_max = -np.pi, np.pi
     x_train = rng.uniform(x_min, x_max, (1000, 1))
     y_train = np.sin(x_train) + rng.normal(0, noise_level, x_train.shape)
-
+    print(y_train.shape)
     x_test = rng.uniform(x_min, x_max, (100, 1))
     y_test = np.sin(x_test) + rng.normal(0, noise_level, x_test.shape)
 
