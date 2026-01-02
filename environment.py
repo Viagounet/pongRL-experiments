@@ -9,7 +9,7 @@ from copy import deepcopy
 from pathlib import Path
 from state_utils import frames_to_bw_resized
 from image_utils import save_bw, save_rgb
-from nn_utils import initialize_linear_nn_params, infer, return_partial_derivatives, update_params_with_grads, mse
+from nn_utils import initialize_linear_nn_params, infer, return_partial_derivatives, update_params_with_grads, mse, softmax
 
 env = gym.make("ALE/Pong-v5")
 
@@ -19,10 +19,11 @@ frames = []
 
 accumulate_training_examples = []
 
-def generate_value_func_training_examples(rewards: list[float], states: list[np.array], discount_factor: float):
+def generate_value_func_training_examples(rewards: list[float], states: list[np.array], actions: list[int], discount_factor: float):
     values = []
     states_for_nn = []
     steps_since_last_reward = 0
+    actions_probs_list = []
     for reward, state in zip(rewards, states):
         states_for_nn.append(state.reshape(-1))
         steps_since_last_reward += 1
@@ -31,12 +32,15 @@ def generate_value_func_training_examples(rewards: list[float], states: list[np.
             steps_since_last_reward = 0
     if steps_since_last_reward > 0:
             values += [0.0] * steps_since_last_reward
-    return np.array(states_for_nn) / 255, np.array(values).reshape(len(rewards), 1)
+    for action, value in zip(actions, values):
+        actions_probs = softmax([value if i==action else 0 for i in range(6)])
+        actions_probs_list.append(actions_probs)
+    return np.array(states_for_nn) / 255, np.array(actions_probs_list).reshape(len(rewards), 6)
 
 states = []
 rewards = []
 
-value_function_params = initialize_linear_nn_params((168*128,50,50,50,1))
+value_function_params = initialize_linear_nn_params((168*128,30,30,30,6))
 
 HYPERPARAMS = {"initial_lr": 1e-3, "final_lr": 0, "lr_regime": "linear"}
 
@@ -68,19 +72,22 @@ def simulate_from_state_best_policy(env, previous_frames, value_function_params)
 
 N_GAMES = 1
 action_choice_strategy = "random"
-print(f"STARTING GAME NUMBER 1 [{action_choice_strategy}]")
+print(f"STARTING GAME NUMBER 1")
+actions = []
+frames.append(observation)
+state = frames_to_bw_resized(frames, 4, (168,128)) 
 while N_GAMES < 100:
-    # if N_GAMES < 4:
-    #     action = env.action_space.sample()
-    # else:
-    # action = env.action_space.sample()
     action_choice_strategy = "best value"
-    predicted_values = simulate_from_state_best_policy(env, frames, value_function_params)
-    action = predicted_values.index(max(predicted_values))
+    # predicted_values = simulate_from_state_best_policy(env, frames, value_function_params)
+    # action = env.action_space.sample()
+    # action = predicted_values.index(max(predicted_values))
+    value, activations = infer(state.reshape(-1).reshape(1,-1), value_function_params)
+    actions_probs = softmax(value).flatten()
+    action = np.random.choice(len(actions_probs), p=actions_probs)
+    actions.append(action)
     observation, reward, terminated, truncated, info = env.step(action)
     frames.append(observation)
     state = frames_to_bw_resized(frames, 4, (168,128)) 
-    value, activations = infer(state.reshape(-1).reshape(1,-1), value_function_params)
     # 
     # save_bw(state, path=Path(f"exports/{_}.png"))
     states.append(state)
@@ -90,11 +97,12 @@ while N_GAMES < 100:
         gif_path = Path(f"exports/pong/game_{N_GAMES}.gif")
         imageio.mimsave(gif_path, frames, fps=30)
         N_GAMES += 1
-        x_train, y_train = generate_value_func_training_examples(rewards, states, 0.95) # x_train = reshaped states, y_train = estimated values
-        value_function_params = train(x_train, y_train, value_function_params, HYPERPARAMS, 500)
+        x_train, y_train = generate_value_func_training_examples(rewards, states, actions, 0.95) # x_train = reshaped states, y_train = estimated values
+        value_function_params = train(x_train, y_train, value_function_params, HYPERPARAMS, 250)
         observation, info = env.reset()
         frames = []
         states = []
         rewards = []
-        print(f"STARTING GAME NUMBER {N_GAMES} [{action_choice_strategy}]")
+        actions = []
+        print(f"STARTING GAME NUMBER {N_GAMES}")
 env.close()

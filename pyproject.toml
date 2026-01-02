@@ -6,7 +6,9 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "gymnasium[accept-rom-license,atari]>=1.2.3",
+    "imageio>=2.37.2",
     "matplotlib>=3.10.8",
     "pillow>=12.0.0",
     "shimmy>=2.0.0",
+    "tqdm>=4.67.1",
 ]
