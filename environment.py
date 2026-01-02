@@ -41,7 +41,8 @@ def generate_value_func_training_examples(rewards: list[float], states: list[np.
 states = []
 rewards = []
 
-value_function_params = initialize_linear_nn_params((84*64,300,6))
+SHAPE = (84,64,4)
+value_function_params = initialize_linear_nn_params((SHAPE[0]*SHAPE[1],300,6))
 
 HYPERPARAMS = {"initial_lr": 1e-3, "final_lr": 0, "lr_regime": "linear"}
 
@@ -63,7 +64,7 @@ def simulate_from_state_best_policy(env, previous_frames, value_function_params)
     for action_type in range(env.action_space.n):
         observation, reward, terminated, truncated, info = env.step(action_type)
         previous_frames.append(observation)
-        state = frames_to_bw_resized(previous_frames, 4, (84,64)) 
+        state = frames_to_bw_resized(previous_frames, 4, (SHAPE[0],SHAPE[1])) 
         value, activations = infer(state.reshape(-1).reshape(1,-1) / 255, value_function_params)
         values.append(value.item())
         env.unwrapped.restore_state(original_state_snapshot)
@@ -79,7 +80,7 @@ actions_for_train = []
 states_for_train = []
 rewards_for_train = []
 frames.append(observation)
-state = frames_to_bw_resized(frames, 4, (84,64))
+state = frames_to_bw_resized(frames, SHAPE[2], (SHAPE[0],SHAPE[1]))
 TRAIN_EVERY = 8
 best_reward = -100
 sum_rewards_history = []
@@ -89,13 +90,13 @@ while best_reward < 20:
     # predicted_values = simulate_from_state_best_policy(env, frames, value_function_params)
     # action = env.action_space.sample()
     # action = predicted_values.index(max(predicted_values))
-    value, activations = infer(state.reshape(-1).reshape(1,-1), value_function_params)
+    value, activations = infer(state.reshape(-1).reshape(1,-1) / 255, value_function_params)
     actions_probs = softmax(value).flatten()
     action = np.random.choice(len(actions_probs), p=actions_probs)
     actions.append(action)
     observation, reward, terminated, truncated, info = env.step(action)
     frames.append(observation)
-    state = frames_to_bw_resized(frames, 4, (84,64)) 
+    state = frames_to_bw_resized(frames, 4, (SHAPE[0],SHAPE[1])) 
     # 
     # save_bw(state, path=Path(f"exports/{_}.png"))
     states.append(state)
